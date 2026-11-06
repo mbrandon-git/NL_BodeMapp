@@ -1,0 +1,18 @@
+{
+  "id": "./",
+  "name": "NL BodeMapp",
+  "short_name": "BodeMapp",
+  "description": "Typical soil profile for any place in the Netherlands, from the Bodemkaart 1:50,000",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#edf0ea",
+  "theme_color": "#2c6b5a",
+  "lang": "en",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NL_BodeMapp desktop</title>
+<style>
+  :root{--bg:#f6f4ef;--card:#fff;--ink:#222;--mute:#6b6b6b;--line:#d9d5ca;--accent:#6b4a2b}
+  @media (prefers-color-scheme:dark){:root{--bg:#1e1c19;--card:#2a2723;--ink:#eee;--mute:#a9a39a;--line:#45403a;--accent:#d4a574}}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,Segoe UI,Roboto,sans-serif}
+  header{padding:14px 16px;border-bottom:1px solid var(--line)} h1{font-size:18px;margin:0 0 2px}
+  .sub{color:var(--mute);font-size:13px}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;align-items:center}
+  select,button{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink)}
+  button{cursor:pointer} button:hover{border-color:var(--accent)}
+  #unitSel{max-width:min(520px,100%)}
+  .ver{max-width:100%;width:100%;margin-top:4px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;padding:0 16px 16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;position:relative}
+  .card h2{font-size:17px;margin:0 28px 0 0} .card .nl{font-style:italic;color:var(--mute);font-size:13px}
+  .rm{position:absolute;top:8px;right:8px;border:none;background:none;font-size:18px;color:var(--mute);padding:2px 6px}
+  .meta{font-size:12.5px;color:var(--mute);margin:6px 0} .meta b{color:var(--ink);font-weight:600}
+  svg{display:block;margin:6px auto;max-width:100%} svg text{fill:var(--ink);font:11px system-ui,sans-serif}
+  svg .tick{fill:var(--mute)}
+  details{font-size:12.5px;margin-top:6px} summary{cursor:pointer;color:var(--accent)}
+  table{border-collapse:collapse;width:100%;margin-top:4px} td,th{padding:2px 4px;border-bottom:1px solid var(--line);text-align:left;font-size:12px;white-space:nowrap}
+  .sw{display:inline-block;width:12px;height:12px;border:1px solid #0004;vertical-align:-2px;margin-right:4px}
+  details.hzx{border:1px solid var(--line);border-radius:8px;margin:4px 0}
+  details.hzx summary{padding:6px 8px;color:var(--ink)} details.hzx .hzc{font-family:ui-monospace,Menlo,Consolas,monospace}
+  details.hzx .hzd,details.hzx .hzs{color:var(--mute);font-size:12px;display:block}
+  details.hzx ul{margin:0;padding:0 8px 8px 26px;font-size:12.5px}
+  .note{margin:0 16px 16px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;color:var(--mute);background:var(--card)}
+  .note h3{margin:0 0 4px;font-size:13px;color:var(--ink)} .note li{margin:2px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>NL_BodeMapp: typical soil profile (prototype)</h1>
+  <div class="sub">Schematic profiles from the Bodemkaart van Nederland 1:50,000. Colours are estimated by rules, not measured.</div>
+</header>
+<div class="note" id="needjs"><h3>This page needs JavaScript</h3>If you can read this message, the profiles are not being drawn. Open the file in a full browser (Safari, Chrome, Edge or Firefox) instead of a preview in Mail, Files, WhatsApp or similar.</div>
+<div class="bar">
+  <label for="unitSel">Add a soil unit:</label>
+  <select id="unitSel"></select>
+  <button id="addBtn">Add</button>
+  <button id="resetBtn">Reset to the 4 test units</button>
+</div>
+<div class="grid" id="grid"></div>
+<div class="note" id="rules"></div>
+<div class="note">
+  <h3>About these diagrams</h3>
+  <ul>
+    <li>Each card shows the typical profile the Bodemkaart assigns to a map unit, not a measurement at a location. Boundaries, depths and properties are ranges or mid-values from the map's standard profiles.</li>
+    <li>The data has no colour field. Colours come from the estimation rules above and should be reviewed by soil scientists.</li>
+    <li id="trnote"></li>
+    <li>Data: BRO Bodemkaart (SGM) V2025-01, Wageningen Environmental Research / BRO, CC0. Dutch soil names are the official legend names.</li>
+  </ul>
+</div>
+
+<script src="../shared/munsell_lookup.js"></script>
+<script src="../shared/profiles_data.js"></script>
+<script src="../shared/translations.js"></script>
+<script src="../shared/core.js"></script>
+<script>
+const APP_VERSION="0.3-desktop-grid";
+document.getElementById("trnote").textContent=translationNote();
+/* ---------- Cards ---------- */
+const grid=document.getElementById("grid"), sel=document.getElementById("unitSel");
+const TEST=["pZg23","hVc","Rd90C","Hn21"];
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function card(code,pid){
+  const u=UNITS[code]; pid=pid||u.profile; const p=PROFILES[pid], d=drawProfile(p);
+  const ver=u.versions.find(v=>v[0]===pid), mainEn=MAIN_EN[u.main];
+  const deps=p.layers.map(l=>`${Math.round(l.top)}-${Math.round(l.bot)} cm: ${esc(DEP_EN[l.dep]||l.dep)}`).join("<br>");
+  const el=document.createElement("div"); el.className="card"; el.dataset.code=code;
+  el.innerHTML=`<button class="rm" title="Remove" aria-label="Remove">&times;</button>
+   <h2>${esc(code)}</h2><div class="nl">${esc(u.name)}</div>
+   <div class="meta"><b>${esc(mainEn||u.main)}</b>${mainEn?` (${esc(u.main)})`:""}</div>
+   ${d.svg}
+   <div class="meta"><b>Profile version:</b> <select class="ver">${u.versions.map(v=>`<option value="${v[0]}"${v[0]===pid?" selected":""}>${esc(PROFILES[v[0]].unit)}${PROFILES[v[0]].landuse.length?" - "+esc(PROFILES[v[0]].landuse.map(l=>LU_EN[l]||l).join(", ")):""}${PROFILES[v[0]].region?" - "+esc(PROFILES[v[0]].region):""} (${v[1]} polygons)</option>`).join("")}</select></div>
+   <div class="meta"><b>Land use of this profile version:</b> ${esc(p.landuse.map(l=>LU_EN[l]||l).join(", ")||"n/a")}</div>
+   <div class="meta"><b>Parent material:</b><br>${deps||"n/a"}</div>
+   <details><summary>What the horizon codes mean</summary>${horizonListHTML(d,"c"+pid)}</details>
+   <details><summary>Horizon data and estimated colours</summary><table><tr><th>Hz</th><th>cm</th><th>OM %</th><th>Lutum %</th><th>Munsell (est.)</th></tr>
+   ${d.hz.map((h,i)=>`<tr><td>${esc(h.n)}</td><td>${h.top}-${h.bot}</td><td>${h.om}</td><td>${h.lut_min}-${h.lut_max}</td><td><span class="sw" style="background:${d.col[i].hex}"></span>${d.col[i].munsell}</td></tr>`).join("")}</table></details>`;
+  el.querySelector(".rm").onclick=()=>el.remove();
+  el.querySelector(".ver").onchange=e=>{el.replaceWith(card(code,Number(e.target.value)))};
+  return el;
+}
+function reset(){grid.innerHTML="";TEST.forEach(c=>grid.append(card(c)))}
+Object.values(UNITS).sort((a,b)=>a.code.localeCompare(b.code)).forEach(u=>{const o=document.createElement("option");o.value=u.code;o.textContent=u.code+" - "+u.name;sel.append(o)});
+document.getElementById("addBtn").onclick=()=>grid.prepend(card(sel.value));
+document.getElementById("resetBtn").onclick=reset;
+document.getElementById("rules").innerHTML="<h3>Colour estimation rules (shared by all profiles)</h3><ul>"+RULES.map(r=>"<li>"+esc(r)+"</li>").join("")+"</ul><div class='sub'>Munsell chips are converted to sRGB by interpolating the Munsell renotation data (R 'munsell' package, v0.5.1).</div>";
+reset();
+{const n=document.getElementById("needjs"); if(n) n.remove();}
+showSelfTest();
+</script>
+</body>
+</html>

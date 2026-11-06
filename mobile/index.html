@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NL BodeMapp</title>
+<style>
+  /* Layout concept: one tall soil column is the whole screen; the unit picker sits above it, facts and data below. */
+  :root{
+    --bg:#edf0ea; --surface:#ffffff; --ink:#1c241f; --mute:#59655d; --line:#d3d9d0;
+    --accent:#2c6b5a; --accent-ink:#ffffff; --sheet:#f7f9f5; --focus:#1a73e8;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#131814; --surface:#1c231e; --ink:#e7ece5; --mute:#9aa69c; --line:#2f3a32;
+      --accent:#74c4aa; --accent-ink:#0f1a15; --sheet:#171d19; --focus:#8ab4f8; color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#131814; --surface:#1c231e; --ink:#e7ece5; --mute:#9aa69c; --line:#2f3a32;
+    --accent:#74c4aa; --accent-ink:#0f1a15; --sheet:#171d19; --focus:#8ab4f8; color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 var(--sans);padding-inline:16px;padding-block:0 28px;touch-action:manipulation}
+  .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:12px 8px;margin-inline:-16px;padding-inline:16px;border-bottom:1px solid var(--line)}
+  .brand{font-weight:700;letter-spacing:.01em}
+  .tag{color:var(--mute);font-size:13px}
+  main{max-width:520px;margin-inline:auto;display:flex;flex-direction:column;gap:14px;padding-top:12px}
+  button,select,input{font:inherit;color:var(--ink)}
+  button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+  .picker{display:grid;grid-template-columns:48px minmax(0,1fr) 48px;gap:8px}
+  .picker button{min-height:56px;border:1px solid var(--line);background:var(--surface);border-radius:12px;cursor:pointer}
+  .picker .step{font-size:26px;line-height:1;color:var(--accent)}
+  .picker .unit{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 8px;text-align:left;padding:8px 14px}
+  .unit .code{font:700 20px/1.1 var(--mono)}
+  .unit .uname{grid-column:1;font-size:13px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .unit .chev{grid-row:1/3;grid-column:2;color:var(--accent);font-size:14px}
+  .stage{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 8px 8px}
+  #svgWrap{display:flex;justify-content:center}
+  #svgWrap svg{height:min(64svh,560px);width:auto;max-width:100%;display:block}
+  #svgWrap svg text{fill:var(--ink);font:11px var(--sans)}
+  #svgWrap svg .tick{fill:var(--mute)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-size:13px}
+  .chip b{font-weight:600}
+  label.l{font-size:13px;color:var(--mute);display:block;margin-bottom:4px}
+  select#ver{width:100%;min-height:48px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+  dl.facts{margin:0;display:grid;gap:12px}
+  dl.facts dt{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+  dl.facts dd{margin:2px 0 0}
+  .nl{font-style:italic;color:var(--mute)}
+  details{border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+  summary{cursor:pointer;padding:14px;min-height:48px;color:var(--accent);font-weight:600}
+  .tbl{overflow-x:auto;padding:0 14px 12px}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{padding:6px 8px 6px 0;text-align:left;white-space:nowrap;border-bottom:1px solid var(--line)}
+  .sw{display:inline-block;width:14px;height:14px;border:1px solid rgba(0,0,0,.35);border-radius:3px;vertical-align:-2px;margin-right:6px}
+  .foot{font-size:12.5px;color:var(--mute)}
+  .foot p{margin:0 0 6px}
+  .hint{font-size:13px;color:var(--mute);margin:-4px 0 0;text-align:center}
+  h2.sec{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin:6px 0 -6px;font-weight:600}
+  #hzlist{display:grid;gap:8px}
+  details.hzx{border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+  details.hzx summary{display:grid;grid-template-columns:auto auto 1fr;gap:2px 8px;align-items:baseline;color:var(--ink);font-weight:400;padding:10px 14px;min-height:48px}
+  details.hzx .hzc{font:700 16px var(--mono)} details.hzx .hzd{color:var(--mute);font-size:13px}
+  details.hzx .hzs{grid-column:1/-1;font-size:13px;color:var(--mute)}
+  details.hzx .sw{grid-row:1}
+  details.hzx ul{margin:0;padding:0 14px 12px 32px;font-size:14px}
+  details.hzx li{margin:4px 0} details.hzx li b{font-family:var(--mono)}
+  details.hzx.flash{outline:3px solid var(--accent)}
+  .top{display:block}
+  .toprow{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+  .tabs{display:flex;gap:8px;padding-top:8px}
+  .tabs[hidden]{display:none}
+  .tabs button{flex:1;min-height:44px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;cursor:pointer;font-weight:600}
+  .tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  select#codeSel{width:100%;min-height:48px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+  #codeWrap[hidden]{display:none}
+  .codecap{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:10px 14px}
+  .codecap p{margin:0 0 6px} .codecap .cch{font-size:14px} .codecap .ccn{font-size:12.5px;color:var(--mute);margin:6px 0 0}
+  .codecap ul{margin:0;padding-left:18px;font-size:14px} .codecap li{margin:4px 0} .codecap li b{font-family:var(--mono)}
+  .ccw{color:var(--mute);font-size:12px}
+  .lowc{display:inline-block;min-width:16px;text-align:center;border:1px solid var(--mute);border-radius:50%;font-size:11px;color:var(--mute);line-height:15px;vertical-align:1px}
+  .found{border:1px solid var(--accent);border-radius:12px;background:var(--surface);padding:10px 14px}
+  .found p{margin:0 0 6px} .found .small{font-size:12.5px;color:var(--mute)} .found .nb{color:var(--ink);font-size:14px}
+  .linkbtn{min-height:44px;padding:0 14px;border:1px solid var(--line);background:var(--surface);border-radius:10px;color:var(--accent);font-weight:600;cursor:pointer}
+  #viewMap{position:fixed;left:0;right:0;bottom:0;top:calc(var(--topH,96px) + env(safe-area-inset-top,0px));z-index:3;background:var(--bg)}
+  #viewMap[hidden]{display:none}
+  #map{position:absolute;inset:0}
+  .mapbtns{position:absolute;right:12px;top:12px;display:grid;gap:8px;z-index:4}
+  .mapbtns button{min-height:44px;padding:0 14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.25);cursor:pointer}
+  #mapcard{position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:4;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+  #mapcard[hidden]{display:none}
+  #mapcard p{margin:0 0 8px} #mapcard .small{font-size:12.5px;color:var(--mute)}
+  .maplegend{position:absolute;left:12px;top:12px;z-index:4;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:12px;color:var(--mute);max-width:60%}
+  .maplegend details{border:0;background:none;border-radius:0}
+  .maplegend summary{padding:2px 2px;min-height:0;font-weight:600;cursor:pointer;color:var(--accent)}
+  .maplegend{max-height:55%;overflow:auto}
+  .lg{list-style:none;margin:6px 0 2px;padding:0} .lg li{margin:3px 0;color:var(--ink)}
+  .lgs{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px;border:1px solid rgba(0,0,0,.3)}
+  #locRow{display:block} #locRow .linkbtn{width:100%}
+  /* unit search sheet */
+  #sheet{position:fixed;inset:0;z-index:20;background:var(--sheet);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+  #sheet[hidden]{display:none}
+  .sheethead{display:flex;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line)}
+  .sheethead input{flex:1;min-width:0;min-height:48px;padding:8px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:16px}
+  .sheethead button{min-height:48px;padding:0 14px;border:1px solid var(--line);background:var(--surface);border-radius:12px;cursor:pointer}
+  #list{overflow-y:auto;flex:1;padding:4px 16px 24px}
+  #list h3{margin:16px 0 4px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+  #list button{display:block;width:100%;text-align:left;min-height:52px;padding:8px 4px;border:0;border-bottom:1px solid var(--line);background:none;cursor:pointer}
+  #list button .c{font:700 16px var(--mono)} #list button .n{display:block;font-size:13px;color:var(--mute)}
+  #list button[aria-current="true"] .c{color:var(--accent)}
+  .empty{padding:24px 4px;color:var(--mute)}
+  .nojs{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface);margin-top:12px}
+  @media (prefers-reduced-motion:no-preference){ #sheet{animation:up .18s ease-out} @keyframes up{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}} }
+</style>
+</head>
+<body>
+<header class="top" id="top"><div class="toprow"><span class="brand">NL BodeMapp</span><span class="tag">Typical soil profile</span></div>
+  <nav class="tabs" id="tabs" hidden><button type="button" id="tabProfile" aria-pressed="true">Profile</button><button type="button" id="tabMap" aria-pressed="false">Map and my location</button></nav></header>
+<div class="nojs" id="needjs"><b>This page needs JavaScript.</b> Open it in a full browser (Safari or Chrome), not in a preview in Mail, Files or a messaging app.</div>
+<main id="viewProfile">
+  <div class="picker">
+    <button id="prev" class="step" type="button" aria-label="Previous soil unit">&#8249;</button>
+    <button id="open" class="unit" type="button" aria-haspopup="dialog"><span class="code" id="uCode">&nbsp;</span><span class="chev" aria-hidden="true">&#9662;</span><span class="uname" id="uName">&nbsp;</span></button>
+    <button id="next" class="step" type="button" aria-label="Next soil unit">&#8250;</button>
+  </div>
+  <div id="found" class="found" hidden></div>
+  <section class="stage" aria-live="polite"><div id="svgWrap"></div></section>
+  <div class="chips" id="chips"></div>
+  <div id="codeWrap" hidden><label class="l" for="codeSel">Map code variant (extra letters)</label><select id="codeSel"></select></div>
+  <div id="codecap"></div>
+  <p class="hint">Tap a layer name on the profile, or a layer below, to see what its code means.</p>
+  <h2 class="sec">Layers (top to bottom)</h2>
+  <div id="hzlist"></div>
+  <div><label class="l" for="ver">Profile version</label><select id="ver"></select></div>
+  <dl class="facts" id="facts"></dl>
+  <details><summary>Horizon data and estimated colours</summary><div class="tbl" id="tbl"></div></details>
+  <details><summary>How the colours are estimated</summary><div class="tbl" style="white-space:normal"><ul id="rules" style="padding-left:18px;margin:0 0 8px"></ul></div></details>
+  <div class="foot">
+    <p>This is the typical profile the Bodemkaart assigns to a soil unit, not a measurement at a place. The data has no colour field, so colours come from shared estimation rules and are for expert review.</p>
+    <p>Data: BRO Bodemkaart (SGM) V2025-01, Wageningen Environmental Research / BRO, CC0. Dutch soil names are the official legend names.</p>
+    <p id="trnote"></p>
+    <p id="ver2"></p>
+  </div>
+</main>
+<section id="viewMap" hidden aria-label="Soil map">
+  <div id="map"></div>
+  <div class="maplegend" id="maplegend">Soil map: tap anywhere</div>
+  <div class="mapbtns"><button type="button" id="locBtn">My location</button></div>
+  <div id="mapcard" hidden></div>
+</section>
+<div id="sheet" hidden role="dialog" aria-modal="true" aria-label="Choose a soil unit">
+  <div class="sheethead"><input id="q" type="search" placeholder="Search code or name" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Search soil units"><button id="close" type="button">Close</button></div>
+  <div id="list" role="listbox"></div>
+</div>
+
+<script src="../shared/munsell_lookup.js"></script>
+<script src="../shared/profiles_data.js"></script>
+<script src="../shared/translations.js"></script>
+<script src="../shared/core.js"></script>
+<script src="map.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

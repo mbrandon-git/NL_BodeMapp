@@ -1,0 +1,8 @@
+# third-party documents (copyright): keep out of a public repository
+Documentation/
+# large generated tile file: the copy in docs/data/ is the one that is published
+tiles/soil.pmtiles
+tiles/_*
+tiles/*.tmp*
+__pycache__/
+*.pyc
